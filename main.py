@@ -54,9 +54,9 @@ def load_gaussian_esp(Gaussian_file):
             line = [i for i in line.split(' ') if len(i)>0]
             ESP_coordinates[counter].append(line[2])
             counter = counter + 1
-
+    cmd.set('connect_cutoff',0.3)
     load_structure(Gaussian_file)
-    load_dots(ESP_coordinates)
+    load_dots(ESP_coordinates, name='QM ESP')
 
 def Read_RESP_charges_file(RESP_charges_file):
 
@@ -125,15 +125,9 @@ def Read_RESP_outfile(RESP_outfile):
     ESP_bool = False
 
     for line in f:
-        #print(line)
-        #print(ESP_bool)
-
-        #if len(line)== 6: break
         if 'esp_qm' in line: ESP_bool = True; ESP_counter +=1; ESP_mass[0].append([]);ESP_mass[1].append([]);ESP_mass[2].append([]); continue
         if 'molecule' in line: ESP_bool = False; continue
-        #print(ESP_bool)
         if ESP_bool: 
-            #print(line)
             ESP_mass[0][ESP_counter].append([line[0],line[1],line[2],line[3]])
             ESP_mass[1][ESP_counter].append([line[0],line[1],line[2],line[4]])
             ESP_mass[2][ESP_counter].append([line[0],line[1],line[2],line[5]])
@@ -144,28 +138,45 @@ def load_RESP_charges(files):
     RESP_charges_file, RESP_outfile, molecule = files.split()
     XYZ = Read_RESP_charges_file(RESP_charges_file)
     ESP_mass = Read_RESP_outfile(RESP_outfile)
+        
+    if len(molecule.split(':')) == 2:        
+        for mol in range(int(molecule.split(':')[0]), int(molecule.split(':')[1])+1):  
 
-    if molecule.split(':') == 2:        
-        for mol in range(int(molecule.split(':')[0]), int(molecule.split(':')[1])): 
-            print(mol)       
+            if len(ESP_mass[0]) < mol-1:
+                break
+            
             load_dots(ESP_mass[0][int(mol)], name='Molecule '+str(mol)+' QM ESP')
             load_dots(ESP_mass[1][int(mol)], name='Molecule '+str(mol)+' PC ESP')
             load_dots(ESP_mass[2][int(mol)], name='Molecule '+str(mol)+' Diff ESP')
-    else:
-            f = open(str(molecule)+'.xyz','a')
-            f.write(str(len(XYZ[int(molecule)][1]))+'\n')
-            f.write('\n')
-            for atom in range(len(XYZ[int(molecule)][1])):
-                print(XYZ[int(molecule)][1][atom])
-                f.write("{}   {:.7f}   {:.7f}   {:.7f}\n".format(XYZ[int(molecule)][1][atom][0],float(XYZ[int(molecule)][1][atom][1]),float(XYZ[int(molecule)][1][atom][2]),float(XYZ[int(molecule)][1][atom][3])))
-                #f.write('   '+str(XYZ[int(molecule)][1][atom][0])+'\t'+str(XYZ[int(molecule)][1][atom][1])+'\t'+str(XYZ[int(molecule)][1][atom][2])+'\t'+str(XYZ[int(molecule)][1][atom][3])+'\n')
             
-            cmd.load(str(molecule)+'.xyz')
-            return
-            load_dots(ESP_mass[0][int(molecule)], name='Molecule '+str(molecule)+' QM ESP')
-            load_dots(ESP_mass[1][int(molecule)], name='Molecule '+str(molecule)+' PC ESP')
-            load_dots(ESP_mass[2][int(molecule)], name='Molecule '+str(molecule)+' Diff ESP')
+            f = open('Molecule_'+str(mol)+'.xyz','a')
+            f.write(str(len(XYZ[int(mol)][1]))+'\n')
+            f.write('Coordinates_'+str(mol)+'\n')
+            for atom in range(len(XYZ[int(mol)][1])):
+                f.write("{:4} {:11.6f} {:11.6f} {:11.6f}\n".format(XYZ[int(mol)][1][atom][0],float(XYZ[int(mol)][1][atom][1]),float(XYZ[int(mol)][1][atom][2]),float(XYZ[int(mol)][1][atom][3])))
+            f.write('\n')
+            f.close()
+            cmd.set('connect_cutoff',2)
+            cmd.load('Molecule_'+str(mol)+'.xyz',format='xyz')
+            os.remove('Molecule_'+str(mol)+'.xyz')            
 
+    else:   
+
+        load_dots(ESP_mass[0][int(molecule)], name='Molecule '+str(molecule)+' QM ESP')
+        load_dots(ESP_mass[1][int(molecule)], name='Molecule '+str(molecule)+' PC ESP')
+        load_dots(ESP_mass[2][int(molecule)], name='Molecule '+str(molecule)+' Diff ESP')
+
+        f = open('Molecule_'+str(molecule)+'.xyz','a')
+        f.write(str(len(XYZ[int(molecule)][1]))+'\n')
+        f.write('Coordinates_'+str(molecule)+'\n')
+
+        for atom in range(len(XYZ[int(molecule)][1])):
+                f.write("{:4} {:11.6f} {:11.6f} {:11.6f}\n".format(XYZ[int(molecule)][1][atom][0],float(XYZ[int(molecule)][1][atom][1]),float(XYZ[int(molecule)][1][atom][2]),float(XYZ[int(molecule)][1][atom][3])))
+        f.write('\n')
+        f.close()
+        cmd.set('connect_cutoff',2)
+        cmd.load('Molecule_'+str(molecule)+'.xyz','Molecule_'+str(molecule)+'.xyz')
+        os.remove('Molecule_'+str(molecule)+'.xyz') 
 
 
 
